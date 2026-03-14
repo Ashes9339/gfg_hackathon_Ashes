@@ -1,0 +1,16 @@
+age,monthly_income,daily_internet_hours,monthly_online_orders,monthly_store_visits,avg_online_spend,avg_store_spend,gender,city_tier,shopping_preference
+23,30000,5,6,2,1200,400,Male,Tier 1,Online
+35,45000,3,2,5,600,1200,Female,Tier 2,Store
+29,38000,6,7,1,1500,300,Male,Tier 1,Online
+41,52000,2,1,6,300,1500,Female,Tier 3,Store
+33,48000,4,4,3,900,800,Male,Tier 2,Hybrid
+27,32000,5,5,2,1100,500,Female,Tier 1,Online
+50,60000,2,1,7,200,1600,Male,Tier 3,Store
+31,42000,4,3,3,800,900,Female,Tier 2,Hybrid
+26,31000,6,6,1,1300,400,Male,Tier 1,Online
+37,47000,3,2,4,700,1000,Female,Tier 2,Store
+45,55000,2,1,6,250,1400,Male,Tier 3,Store
+28,35000,5,5,2,1200,450,Female,Tier 1,Online
+39,49000,3,2,5,650,1100,Male,Tier 2,Store
+34,46000,4,3,3,850,850,Female,Tier 2,Hybrid
+30,40000,6,7,1,1400,350,Male,Tier 1,Online
