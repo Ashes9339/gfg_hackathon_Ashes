@@ -1,0 +1,16 @@
+customer_id,name,age,city,product,price,quantity,purchase_date
+1,Rahul,25,Kolkata,Laptop,55000,1,2024-01-12
+2,Priya,30,Delhi,Phone,25000,1,2024-01-15
+3,Amit,28,Mumbai,Headphones,2000,2,2024-01-18
+4,Sneha,35,Bangalore,Tablet,18000,1,2024-01-20
+5,Rohit,22,Kolkata,Keyboard,1500,1,2024-01-22
+6,Ananya,27,Chennai,Monitor,12000,1,2024-01-25
+7,Vikram,40,Delhi,Laptop,60000,1,2024-01-28
+8,Pooja,29,Mumbai,Mouse,800,2,2024-02-01
+9,Karan,33,Bangalore,Printer,9000,1,2024-02-03
+10,Neha,26,Kolkata,Phone,22000,1,2024-02-05
+11,Arjun,31,Delhi,Tablet,17000,1,2024-02-08
+12,Riya,24,Mumbai,Headphones,2500,1,2024-02-10
+13,Sahil,38,Chennai,Laptop,52000,1,2024-02-12
+14,Tina,27,Bangalore,Keyboard,1800,1,2024-02-15
+15,Manish,34,Kolkata,Monitor,14000,1,2024-02-18
