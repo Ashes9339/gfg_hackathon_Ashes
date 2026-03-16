@@ -19,14 +19,19 @@ This project converts natural language queries into SQL queries and generates vi
 
 ## Setup
 
-Install dependencies:
+1.Install dependencies:
 
-pip install -r requirements.txt
+ pip install -r requirements.txt
 
-Create `.env` file:
+2.Create `.env` file;
 
-GEMINI_API_KEY=your_api_key
+Then put this into the .env file:
 
-Run the dashboard:
+        GEMINI_API_KEY=your_api_key
 
-streamlit run app.py
+
+3.Run this to the terminal:
+
+    a.python clean_data.py
+    b.python database.py
+    c.streamlit run app.py / python -m streamlit run app.py
