@@ -42,7 +42,7 @@ client = genai.Client(api_key=api_key)
 
 # ---------------- HEADER ----------------
 
-st.title("📊 Conversational AI Business Intelligence Dashboard")
+st.title("📊 Business Intelligence Dashboard")
 
 st.markdown("""
 Ask questions about your dataset and the system will automatically:
@@ -119,6 +119,16 @@ st.caption("Showing first 10 rows of the dataset")
 
 st.dataframe(df_preview, width="stretch")
 
+st.divider()
+
+st.info(
+"""
+💡 Ask questions below to explore insights from the dataset.
+"""
+)
+
+st.divider()
+
 
 # ---------------- GEMINI CACHE ----------------
 
@@ -142,7 +152,7 @@ def run_query(sql_query):
 
 # ---------------- DISPLAY CHAT HISTORY ----------------
 
-for message in st.session_state.messages:
+for i, message in enumerate(st.session_state.messages):
 
     with st.chat_message(message["role"]):
 
@@ -153,7 +163,11 @@ for message in st.session_state.messages:
             st.dataframe(message["content"], width="stretch")
 
         elif message["type"] == "chart":
-            st.plotly_chart(message["content"], width="stretch")
+            st.plotly_chart(
+                message["content"],
+                width="stretch",
+                key=f"history_chart_{i}"
+            )
 
         elif message["type"] == "metric":
             st.metric(message["label"], message["value"])
@@ -182,7 +196,7 @@ if prompt:
     )
 
 
-    # ---------------- GENERATE SQL ----------------
+    # ---------------- GENERATE SQL + CHART ----------------
 
     with st.spinner("Analyzing data with AI..."):
 
@@ -204,12 +218,21 @@ The SQL can return:
 OR
 2) A single aggregated value.
 
+Choose the best visualization:
+
+Rules:
+- line → time series
+- pie → parts of a whole
+- bar → category comparison
+- metric → single value
+
 Use SQLite compatible SQL only.
 
 Format:
 
 {{
-"sql":"SQL_QUERY"
+"sql":"SQL_QUERY",
+"chart":"bar|pie|line|metric"
 }}
 """)
 
@@ -223,6 +246,7 @@ Format:
     result = json.loads(json_text)
 
     sql = result.get("sql")
+    chart = result.get("chart", "bar")
 
     df = run_query(sql)
 
@@ -238,7 +262,6 @@ Format:
 
         else:
 
-            # Show result table
             st.subheader("Query Result")
             st.dataframe(df, width="stretch")
 
@@ -249,8 +272,9 @@ Format:
             })
 
 
-            # Metric result
-            if df.shape[1] == 1:
+            # -------- METRIC --------
+
+            if df.shape[1] == 1 or chart == "metric":
 
                 metric_name = df.columns[0].replace("_"," ").title()
                 metric_value = df.iloc[0,0]
@@ -264,32 +288,33 @@ Format:
                     "value":metric_value
                 })
 
+
+            # -------- CHART --------
+
             else:
 
                 st.subheader("Visualization")
 
-                col1, col2 = st.columns(2)
+                if chart == "bar":
+                    fig = px.bar(df, x=df.columns[0], y=df.columns[1])
 
-                with col1:
+                elif chart == "pie":
+                    fig = px.pie(df, names=df.columns[0], values=df.columns[1])
 
-                    st.write("Bar Chart")
+                elif chart == "line":
+                    fig = px.line(df, x=df.columns[0], y=df.columns[1])
 
-                    fig_bar = px.bar(df, x=df.columns[0], y=df.columns[1])
+                else:
+                    fig = px.bar(df, x=df.columns[0], y=df.columns[1])
 
-                    st.plotly_chart(fig_bar, width="stretch")
+                st.plotly_chart(
+                    fig,
+                    width="stretch",
+                    key=f"new_chart_{len(st.session_state.messages)}"
+                )
 
-
-                with col2:
-
-                    st.write("Pie Chart")
-
-                    fig_pie = px.pie(df, names=df.columns[0], values=df.columns[1])
-
-                    st.plotly_chart(fig_pie, width="stretch")
-
-
-                st.write("Line Chart")
-
-                fig_line = px.line(df, x=df.columns[0], y=df.columns[1])
-
-                st.plotly_chart(fig_line, width="stretch")
+                st.session_state.messages.append({
+                    "role":"assistant",
+                    "type":"chart",
+                    "content":fig
+                })
