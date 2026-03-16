@@ -74,13 +74,11 @@ else:
 
     conn = sqlite3.connect("customers.db")
 
-    # Get real dataset row count
     total_rows = pd.read_sql_query(
         "SELECT COUNT(*) as count FROM customers",
         conn
     )["count"][0]
 
-    # Load preview rows only
     df_preview = pd.read_sql_query(
         "SELECT * FROM customers LIMIT 10",
         conn
@@ -155,18 +153,17 @@ User question:
 
 Return ONLY valid JSON.
 
-The SQL must return TWO columns:
-1) category column
-2) numeric value column
+The SQL can return:
+1) Two columns (category and value) for charts
+OR
+2) A single aggregated value (like average, median, count).
 
-Example:
-SELECT city_tier, COUNT(*) AS value FROM {dataset_name} GROUP BY city_tier
+Use SQLite compatible SQL only.
 
 Format:
 
 {{
-"sql":"SQL_QUERY",
-"chart":"bar|line|pie"
+"sql":"SQL_QUERY"
 }}
 """
 
@@ -187,8 +184,7 @@ Format:
 
         result = json.loads(json_text)
 
-        sql = result["sql"]
-        chart = result["chart"]
+        sql = result.get("sql")
 
         st.subheader("Generated SQL")
         st.code(sql)
@@ -202,53 +198,64 @@ Format:
         st.subheader("Query Result")
         st.dataframe(df, width="stretch")
 
+
+        # ---------------- METRIC HANDLING ----------------
+
+        if df.shape[1] == 1:
+
+            metric_name = df.columns[0].replace("_"," ").title()
+            metric_value = df.iloc[0,0]
+
+            st.subheader("Result")
+            st.metric(metric_name, metric_value)
+            st.stop()
+
+
         st.divider()
+
 
         # ---------------- VISUALIZATION ----------------
 
-        if len(df.columns) < 2:
+        st.subheader("📈 Visualization")
 
-            st.warning("Not enough columns for visualization.")
-            st.dataframe(df)
+        col1, col2 = st.columns(2)
 
-        else:
+        with col1:
 
-            if chart == "bar":
+            st.subheader("Bar Chart")
 
-                fig = px.bar(
-                    df,
-                    x=df.columns[0],
-                    y=df.columns[1]
-                )
-
-            elif chart == "line":
-
-                fig = px.line(
-                    df,
-                    x=df.columns[0],
-                    y=df.columns[1]
-                )
-
-            elif chart == "pie":
-
-                fig = px.pie(
-                    df,
-                    names=df.columns[0],
-                    values=df.columns[1]
-                )
-
-            else:
-
-                st.warning("Unknown chart type.")
-                st.dataframe(df)
-                st.stop()
-
-            st.subheader("📈 Visualization")
-
-            st.plotly_chart(
-                fig,
-                width="stretch"
+            fig_bar = px.bar(
+                df,
+                x=df.columns[0],
+                y=df.columns[1]
             )
+
+            st.plotly_chart(fig_bar, width="stretch")
+
+
+        with col2:
+
+            st.subheader("Pie Chart")
+
+            fig_pie = px.pie(
+                df,
+                names=df.columns[0],
+                values=df.columns[1]
+            )
+
+            st.plotly_chart(fig_pie, width="stretch")
+
+
+        st.subheader("Line Chart")
+
+        fig_line = px.line(
+            df,
+            x=df.columns[0],
+            y=df.columns[1]
+        )
+
+        st.plotly_chart(fig_line, width="stretch")
+
 
     except Exception as e:
 
