@@ -74,6 +74,7 @@ if uploaded_file is not None:
 
     dataset_name = "data"
     columns = ", ".join(df_uploaded.columns)
+    valid_columns = list(df_uploaded.columns)
 
     total_rows = len(df_uploaded)
 
@@ -85,18 +86,15 @@ else:
 
     conn = sqlite3.connect("customers.db")
 
-    total_rows = pd.read_sql_query(
-        "SELECT COUNT(*) as count FROM customers",
-        conn
-    )["count"][0]
+    df_all = pd.read_sql_query("SELECT * FROM customers", conn)
 
-    df_preview = pd.read_sql_query(
-        "SELECT * FROM customers LIMIT 10",
-        conn
-    )
+    total_rows = len(df_all)
+
+    df_preview = df_all.head(10)
 
     dataset_name = "customers"
-    columns = ", ".join(df_preview.columns)
+    columns = ", ".join(df_all.columns)
+    valid_columns = list(df_all.columns)
 
     st.sidebar.info("Using default dataset")
 
@@ -179,7 +177,6 @@ prompt = st.chat_input("Ask a question about your dataset")
 
 if prompt:
 
-    # Show user message
     st.session_state.messages.append({
         "role": "user",
         "type": "text",
@@ -190,13 +187,12 @@ if prompt:
         st.write(prompt)
 
 
-    # Conversation history
     history = " ".join(
         msg["content"] for msg in st.session_state.messages if msg["role"] == "user"
     )
 
 
-    # ---------------- GENERATE SQL + CHART ----------------
+# ---------------- GENERATE SQL + CHART ----------------
 
     with st.spinner("Analyzing data with AI..."):
 
@@ -205,34 +201,30 @@ You are a data analyst.
 
 Database table: {dataset_name}
 
-Columns:
+Available columns:
 {columns}
 
-Conversation history:
+User question:
 {history}
+
+IMPORTANT RULES:
+- Only use columns listed above.
+- Do NOT invent column names.
+- If the requested column does not exist return an error.
 
 Return ONLY JSON.
 
-The SQL can return:
-1) Two columns (category and value)
-OR
-2) A single aggregated value.
-
-Choose the best visualization:
-
-Rules:
-- line → time series
-- pie → parts of a whole
-- bar → category comparison
-- metric → single value
-
-Use SQLite compatible SQL only.
-
-Format:
+Valid response:
 
 {{
 "sql":"SQL_QUERY",
 "chart":"bar|pie|line|metric"
+}}
+
+Invalid request example:
+
+{{
+"error":"Requested column does not exist in the dataset"
 }}
 """)
 
@@ -245,13 +237,36 @@ Format:
 
     result = json.loads(json_text)
 
+
+# ---------------- HANDLE ERRORS ----------------
+
+    if "error" in result:
+
+        with st.chat_message("assistant"):
+            st.error(result["error"])
+
+        st.session_state.messages.append({
+            "role":"assistant",
+            "type":"text",
+            "content":result["error"]
+        })
+
+        st.stop()
+
+
     sql = result.get("sql")
     chart = result.get("chart", "bar")
+
+
+# ---------------- EXTRA SQL SAFETY ----------------
+
+    for col in valid_columns:
+        sql = sql.replace(col.lower(), col)
 
     df = run_query(sql)
 
 
-    # ---------------- AI RESPONSE ----------------
+# ---------------- AI RESPONSE ----------------
 
     with st.chat_message("assistant"):
 
@@ -272,7 +287,7 @@ Format:
             })
 
 
-            # -------- METRIC --------
+# -------- METRIC --------
 
             if df.shape[1] == 1 or chart == "metric":
 
@@ -289,7 +304,7 @@ Format:
                 })
 
 
-            # -------- CHART --------
+# -------- CHART --------
 
             else:
 
