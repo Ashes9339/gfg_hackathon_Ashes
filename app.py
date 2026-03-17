@@ -57,12 +57,14 @@ Ask questions about your dataset and the system will automatically:
 * Analyze the data  
 * Build visualizations  
 """)
+
 # SIDEBAR 
 st.sidebar.title("Dataset Controls")
 uploaded_file = st.sidebar.file_uploader(
     "Upload CSV Dataset (optional)",
     type=["csv"]
 )
+
 #clear chat
 if st.sidebar.button("Clear Chat"):
     st.session_state.messages = []
@@ -95,7 +97,6 @@ if uploaded_file is not None:
     df_preview = df_uploaded.head(10)
     st.sidebar.info("Using uploaded dataset")
     st.toast("Dataset cleaned and loaded successfully")
-
 
 else:
 
@@ -151,6 +152,7 @@ def ask_gemini(prompt):
 def run_query(sql_query):
     return pd.read_sql_query(sql_query, conn)
 
+
 #  CHAT HISTORY 
 for i, message in enumerate(st.session_state.messages):
 
@@ -186,7 +188,6 @@ if prompt:
 
     with st.chat_message("user"):
         st.write(prompt)
-
 
     history = " ".join(
         msg["content"] for msg in st.session_state.messages if msg["role"] == "user"
@@ -228,11 +229,20 @@ FOLLOW-UP LOGIC:
 - If the user asks a NEW question that does not reference previous results,
   ignore previous filters and generate a completely new SQL query.
 
+CHART RULES:
+- Use bar chart for comparisons
+- Use line chart for trends over time
+- Use pie chart only for proportions
+- Use scatter for relationships
+- Use histogram for distribution
+- Use box for spread of data
+- Do NOT always use pie chart
+
 Return ONLY JSON.
 
 {{
 "sql":"SQL_QUERY",
-"chart":"bar|pie|line|metric"
+"chart":"bar|pie|line|scatter|area|histogram|box|heatmap|treemap|metric"
 }}
 
 Error example:
@@ -241,7 +251,6 @@ Error example:
 "error":"Requested column does not exist in dataset"
 }}
 """)
-
 
     text = response.text.strip()
 
@@ -274,7 +283,6 @@ Error example:
 
     for col in valid_columns:
         sql = sql.replace(col.lower(), col)
-   
 
     if "ILIKE" in sql:
         sql = sql.replace("ILIKE", "LIKE")
@@ -282,8 +290,8 @@ Error example:
 
     for col in valid_columns:
         sql = sql.replace(f"{col} LIKE", f"LOWER({col}) LIKE")
-    df = run_query(sql)
 
+    df = run_query(sql)
 
 
     with st.chat_message("assistant"):
@@ -348,26 +356,55 @@ Data:
 
                 st.subheader("Visualization")
 
-                if chart == "bar":
-                    fig = px.bar(df, x=df.columns[0], y=df.columns[1])
+                try:
+                    if chart == "bar":
+                        fig = px.bar(df, x=df.columns[0], y=df.columns[1])
 
-                elif chart == "pie":
-                    fig = px.pie(df, names=df.columns[0], values=df.columns[1])
+                    elif chart == "pie":
+                        fig = px.pie(df, names=df.columns[0], values=df.columns[1])
 
-                elif chart == "line":
-                    fig = px.line(df, x=df.columns[0], y=df.columns[1])
+                    elif chart == "line":
+                        fig = px.line(df, x=df.columns[0], y=df.columns[1])
 
-                else:
-                    fig = px.bar(df, x=df.columns[0], y=df.columns[1])
+                    elif chart == "scatter":
+                        fig = px.scatter(df, x=df.columns[0], y=df.columns[1])
 
-                st.plotly_chart(
-                    fig,
-                    width="stretch",
-                    key=f"new_chart_{len(st.session_state.messages)}"
-                )
+                    elif chart == "area":
+                        fig = px.area(df, x=df.columns[0], y=df.columns[1])
 
-                st.session_state.messages.append({
-                    "role":"assistant",
-                    "type":"chart",
-                    "content":fig
-                })
+                    elif chart == "histogram":
+                        fig = px.histogram(df, x=df.columns[0])
+
+                    elif chart == "box":
+                        fig = px.box(df, y=df.columns[1])
+                        
+                    elif chart == "heatmap":
+                        if df.shape[1]>=2:
+                            fig = px.density_heatmap(df, x=df.columns[0],y=df.columns[1])
+                        else:
+                            fig = px.histogram(df, x=df.columns[0])
+                    elif chart == "treemap":
+                        if df.shape[1]>=2:
+                            fig=px.treemap(df, path=[df.columns[0]],values=df.columns[1])
+                        else:
+                            fig = px.bar(df, x=df.columns[0], y =df.columns[0])
+                    else:
+                        if df.shape[1] >= 2:
+                            fig = px.bar(df, x=df.columns[0], y=df.columns[1])
+                        else:
+                            fig = px.histogram(df, x=df.columns[0])
+
+                    st.plotly_chart(
+                        fig,
+                        width="stretch",
+                        key=f"new_chart_{len(st.session_state.messages)}"
+                    )
+
+                    st.session_state.messages.append({
+                        "role":"assistant",
+                        "type":"chart",
+                        "content":fig
+                    })
+
+                except Exception:
+                    st.warning("Could not generate chart, showing table instead.")
