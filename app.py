@@ -25,6 +25,24 @@ def load_css(file_name):
 
 load_css("style.css")
 
+st.markdown("""
+<style>
+/* Hide top-right menu */
+[data-testid="stToolbar"] {
+    display: none;
+}
+
+/* Hide footer */
+footer {
+    visibility: hidden;
+}
+
+/* Hide hamburger menu */
+#MainMenu {
+    visibility: hidden;
+}
+</style>
+""", unsafe_allow_html=True)
 
 # ---------------- SESSION STATE ----------------
 
