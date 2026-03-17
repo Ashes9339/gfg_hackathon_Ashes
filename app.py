@@ -47,9 +47,9 @@ st.title("📊 Business Intelligence Dashboard")
 st.markdown("""
 Ask questions about your dataset and the system will automatically:
 
-• Generate SQL queries  
-• Analyze the data  
-• Build visualizations  
+* Generate SQL queries  
+* Analyze the data  
+* Build visualizations  
 """)
 
 
@@ -61,6 +61,11 @@ uploaded_file = st.sidebar.file_uploader(
     "Upload CSV Dataset (optional)",
     type=["csv"]
 )
+
+#clear chat
+if st.sidebar.button("Clear Chat"):
+    st.session_state.messages = []
+    st.rerun()
 
 
 # ---------------- DATASET LOADING ----------------
@@ -204,29 +209,43 @@ Database table: {dataset_name}
 Available columns:
 {columns}
 
-User question:
+Conversation history:
 {history}
+
+Current user question:
+{prompt}
 
 IMPORTANT RULES:
 - Only use columns listed above.
 - Do NOT invent column names.
 - If the requested column does not exist return an error.
+- Use ONLY SQLite compatible SQL
+- DO NOT use ILIKE
+- Use LOWER(column) LIKE '%value%' for case-insensitive text search
+
+FOLLOW-UP LOGIC:
+
+- If the user clearly refers to previous results using words like
+  "those", "them", "now", "compare those", "filter this",
+  then modify the previous query.
+
+- If the user asks a NEW question that does not reference previous results,
+  ignore previous filters and generate a completely new SQL query.
 
 Return ONLY JSON.
-
-Valid response:
 
 {{
 "sql":"SQL_QUERY",
 "chart":"bar|pie|line|metric"
 }}
 
-Invalid request example:
+Error example:
 
 {{
-"error":"Requested column does not exist in the dataset"
+"error":"Requested column does not exist in dataset"
 }}
 """)
+
 
     text = response.text.strip()
 
@@ -262,7 +281,15 @@ Invalid request example:
 
     for col in valid_columns:
         sql = sql.replace(col.lower(), col)
+    # -------- SQL SAFETY FIX --------
 
+    if "ILIKE" in sql:
+        sql = sql.replace("ILIKE", "LIKE")
+        st.warning("Adjusted query for SQLite compatibility")
+
+# dynamic case-insensitive fix
+    for col in valid_columns:
+        sql = sql.replace(f"{col} LIKE", f"LOWER({col}) LIKE")
     df = run_query(sql)
 
 
@@ -285,6 +312,26 @@ Invalid request example:
                 "type":"data",
                 "content":df
             })
+
+
+# ---------------- AI INSIGHT ----------------
+
+            try:
+
+                insight_response = ask_gemini(f"""
+Explain the key business insight from this data in 2 short sentences.
+
+Data:
+{df.head(10).to_string()}
+""")
+
+                insight_text = insight_response.text
+
+                if insight_text:
+                    st.success(insight_text)
+
+            except Exception:
+                st.warning("Could not generate insight.")
 
 
 # -------- METRIC --------
